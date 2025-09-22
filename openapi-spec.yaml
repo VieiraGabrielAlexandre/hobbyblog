@@ -1,0 +1,130 @@
+openapi: 3.0.3
+info:
+  title: Vieira Blog API
+  version: 1.0.0
+servers:
+  - url: https://{api_id}.execute-api.{region}.amazonaws.com
+    variables:
+      api_id:
+        default: your-api-id
+      region:
+        default: sa-east-1
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200': { description: OK }
+  /v1/posts:
+    get:
+      summary: List posts
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [draft, published] }
+        - in: query
+          name: tag
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - in: query
+          name: cursor
+          schema: { type: string, description: "DynamoDB LastEvaluatedKey (base64 json)" }
+      responses:
+        '200':
+          description: A paged list of posts
+    post:
+      summary: Create post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PostInput' }
+      responses:
+        '201': { description: Created }
+  /v1/posts/{id}:
+    get:
+      summary: Get post by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+        '404': { description: Not found }
+    put:
+      summary: Update post
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PostUpdate' }
+      responses:
+        '200': { description: OK }
+    delete:
+      summary: Delete post
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '204': { description: No Content }
+  /v1/posts/slug/{slug}:
+    get:
+      summary: Get post by slug
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+        '404': { description: Not found }
+  /v1/posts/{id}/publish:
+    post:
+      summary: Publish post
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+components:
+  schemas:
+    Post:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        slug: { type: string }
+        content: { type: string, description: "Markdown" }
+        tags: { type: array, items: { type: string } }
+        status: { type: string, enum: [draft, published] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        publishedAt: { type: string, format: date-time, nullable: true }
+    PostInput:
+      type: object
+      required: [title, slug, content]
+      properties:
+        title: { type: string }
+        slug: { type: string }
+        content: { type: string }
+        tags: { type: array, items: { type: string } }
+    PostUpdate:
+      type: object
+      properties:
+        title: { type: string }
+        slug: { type: string }
+        content: { type: string }
+        tags: { type: array, items: { type: string } }
+        status: { type: string, enum: [draft, published] }
