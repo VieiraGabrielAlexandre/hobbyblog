@@ -5,6 +5,7 @@ import (
 	"github.com/VieiraGabrielAlexandre/hobbyblog/internal/health"
 	apphttp "github.com/VieiraGabrielAlexandre/hobbyblog/internal/http"
 	"github.com/VieiraGabrielAlexandre/hobbyblog/internal/log"
+	"github.com/VieiraGabrielAlexandre/hobbyblog/internal/posts"
 	"github.com/VieiraGabrielAlexandre/hobbyblog/internal/server"
 	"go.uber.org/fx"
 )
@@ -17,6 +18,7 @@ func New() *fx.App {
 			apphttp.NewEngine,
 		),
 		health.Module,
+		posts.Module,
 		fx.Invoke(server.StartHttpServer),
 	)
 }

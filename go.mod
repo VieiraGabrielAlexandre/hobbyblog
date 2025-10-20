@@ -4,6 +4,7 @@ go 1.24.5
 
 require (
 	github.com/gin-gonic/gin v1.11.0
+	github.com/oklog/ulid/v2 v2.1.1
 	go.uber.org/fx v1.24.0
 	go.uber.org/zap v1.27.0
 )
