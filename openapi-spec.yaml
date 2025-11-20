@@ -1,7 +1,8 @@
 openapi: 3.0.3
 info:
-  title: Vieira Blog API
+  title: Hobbyblog API
   version: 1.0.0
+
 servers:
   - url: https://{api_id}.execute-api.{region}.amazonaws.com
     variables:
@@ -9,74 +10,73 @@ servers:
         default: your-api-id
       region:
         default: sa-east-1
+
 paths:
   /health:
     get:
       summary: Health check
       responses:
-        '200': { description: OK }
-  /v1/posts:
-    get:
-      summary: List posts
-      parameters:
-        - in: query
-          name: status
-          schema: { type: string, enum: [draft, published] }
-        - in: query
-          name: tag
-          schema: { type: string }
-        - in: query
-          name: limit
-          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
-        - in: query
-          name: cursor
-          schema: { type: string, description: "DynamoDB LastEvaluatedKey (base64 json)" }
-      responses:
         '200':
-          description: A paged list of posts
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /v1/posts:
     post:
-      summary: Create post
+      summary: Create a new post
+      description: >
+        Cria um novo post sobre filmes, HQs, mangás, animes, escape rooms,
+        etc. O conteúdo pode ser HTML, Markdown ou texto simples.
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/PostInput' }
+            schema:
+              $ref: '#/components/schemas/PostCreateInput'
       responses:
-        '201': { description: Created }
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: Invalid input
+        '409':
+          description: Conflict (slug already exists)
+        '500':
+          description: Server error
+
   /v1/posts/{id}:
     get:
-      summary: Get post by id
+      summary: Get post by ID
       parameters:
         - in: path
           name: id
           required: true
-          schema: { type: string }
+          schema:
+            type: string
+          description: ULID do post
       responses:
-        '200': { description: OK }
-        '404': { description: Not found }
-    put:
-      summary: Update post
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/PostUpdate' }
-      responses:
-        '200': { description: OK }
-    delete:
-      summary: Delete post
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
-      responses:
-        '204': { description: No Content }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: Invalid ID
+        '404':
+          description: Not found
+        '500':
+          description: Server error
+
   /v1/posts/slug/{slug}:
     get:
       summary: Get post by slug
@@ -84,47 +84,206 @@ paths:
         - in: path
           name: slug
           required: true
-          schema: { type: string }
+          schema:
+            type: string
+          description: Slug normalizado (minúsculo, hifens)
       responses:
-        '200': { description: OK }
-        '404': { description: Not found }
-  /v1/posts/{id}/publish:
-    post:
-      summary: Publish post
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
-      responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: Invalid slug
+        '404':
+          description: Not found
+        '500':
+          description: Server error
+
 components:
   schemas:
     Post:
       type: object
+      description: >
+        Representa um post do hobbyblog (filmes, HQs, mangás, animes, escape rooms, etc).
       properties:
-        id: { type: string }
-        title: { type: string }
-        slug: { type: string }
-        content: { type: string, description: "Markdown" }
-        tags: { type: array, items: { type: string } }
-        status: { type: string, enum: [draft, published] }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
-        publishedAt: { type: string, format: date-time, nullable: true }
-    PostInput:
+        id:
+          type: string
+          description: ULID do post
+          example: 01J0Z3M7D6G4Q4D5XQ5K97H6ZP
+        type:
+          type: string
+          description: Tipo de obra/conteúdo.
+          example: movie
+          enum:
+            - movie
+            - comic
+            - manga
+            - anime
+            - series
+            - game
+            - escape_room
+            - article
+            - other
+        title:
+          type: string
+          example: Akira (1988)
+        slug:
+          type: string
+          description: Slug único, normalizado (minúsculas, hifens).
+          example: akira-neo-tokyo
+        content:
+          type: string
+          description: >
+            Conteúdo principal do post. Pode ser HTML, Markdown ou texto simples,
+            conforme indicado em contentFormat.
+        contentFormat:
+          type: string
+          description: Formato do campo content.
+          enum:
+            - html
+            - markdown
+            - plaintext
+          example: html
+        excerpt:
+          type: string
+          description: Resumo curto para listagens, cards, etc.
+          example: "Neo-Tokyo está prestes a explodir."
+        coverImage:
+          type: string
+          format: uri
+          description: URL de imagem de capa.
+          example: https://example.com/images/akira.jpg
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["anime", "cyberpunk", "classic"]
+        rating:
+          type: number
+          format: float
+          description: Nota da obra (0–10, por exemplo).
+          example: 9.5
+        releaseDate:
+          type: string
+          description: >
+            Data de lançamento. Pode ser RFC3339 completo ou apenas ano/mês.
+          example: "1988-07-16T00:00:00Z"
+        creators:
+          type: array
+          items:
+            type: string
+          description: Autores/diretores/estúdios relacionados.
+          example: ["Katsuhiro Otomo"]
+        sourceUrl:
+          type: string
+          format: uri
+          description: URL de referência externa (IMDB, MAL, site do escape etc.).
+          example: https://www.imdb.com/title/tt0094625/
+        meta:
+          type: object
+          additionalProperties: true
+          description: >
+            Campo flexível para metadados específicos da obra
+            (ex.: duraçãoMin, estúdio, cidade, dificuldade do escape…).
+          example:
+            durationMin: 124
+            studio: "Tokyo Movie Shinsha"
+            city: "Neo-Tokyo"
+        status:
+          type: string
+          enum:
+            - draft
+            - published
+          example: draft
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-11-20T10:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-11-20T10:00:00Z"
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2025-11-20T12:30:00Z"
+
+    PostCreateInput:
       type: object
-      required: [title, slug, content]
+      required:
+        - title
+        - slug
+        - content
       properties:
-        title: { type: string }
-        slug: { type: string }
-        content: { type: string }
-        tags: { type: array, items: { type: string } }
-    PostUpdate:
-      type: object
-      properties:
-        title: { type: string }
-        slug: { type: string }
-        content: { type: string }
-        tags: { type: array, items: { type: string } }
-        status: { type: string, enum: [draft, published] }
+        type:
+          type: string
+          description: Tipo de obra/conteúdo. Default "other" se omitido.
+          enum:
+            - movie
+            - comic
+            - manga
+            - anime
+            - series
+            - game
+            - escape_room
+            - article
+            - other
+          example: anime
+        title:
+          type: string
+          example: "Akira (1988)"
+        slug:
+          type: string
+          description: >
+            Slug sugerido. Será normalizado (minúsculas, espaços -> hifens).
+          example: "Akira Neo-Tokyo"
+        content:
+          type: string
+          description: >
+            Conteúdo do post. Se contentFormat = "html", o backend sanitiza o HTML.
+        contentFormat:
+          type: string
+          description: Formato do conteúdo. Se omitido, assume "plaintext".
+          enum:
+            - html
+            - markdown
+            - plaintext
+          example: "html"
+        excerpt:
+          type: string
+          example: "Neo-Tokyo em caos total."
+        coverImage:
+          type: string
+          format: uri
+          example: "https://example.com/images/akira.jpg"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["Anime","Clássico","Cyberpunk"]
+        rating:
+          type: number
+          format: float
+          example: 9.5
+        releaseDate:
+          type: string
+          example: "1988-07-16T00:00:00Z"
+        creators:
+          type: array
+          items:
+            type: string
+          example: ["Katsuhiro Otomo"]
+        sourceUrl:
+          type: string
+          format: uri
+          example: "https://www.imdb.com/title/tt0094625/"
+        meta:
+          type: object
+          additionalProperties: true
+          example:
+            durationMin: 124
+            studio: "Toho"
+            difficulty: "hard"

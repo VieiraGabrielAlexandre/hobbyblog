@@ -7,7 +7,7 @@ import (
 
 var Module = fx.Options(
 	fx.Provide(NewHandler),
-	fx.Provide(NewRepoMem), // trocar depois
+	fx.Provide(NewRepoMem), // repo de memória pra dev
 	fx.Invoke(registerRoutes),
 )
 
